@@ -1,0 +1,1803 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fitness Journey - Cloud Sync</title>
+    <meta name="description" content="La tua app fitness con sincronizzazione cloud automatica">
+    <meta name="theme-color" content="#667eea">
+    
+    <!-- PWA Support -->
+    <link rel="manifest" href="data:application/json,{&quot;name&quot;:&quot;Fitness Journey&quot;,&quot;short_name&quot;:&quot;Fitness&quot;,&quot;start_url&quot;:&quot;/&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;background_color&quot;:&quot;#667eea&quot;,&quot;theme_color&quot;:&quot;#667eea&quot;}">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <style>
+        :root {
+            --primary: #667eea;
+            --primary-dark: #5a67d8;
+            --primary-light: #7c8ff0;
+            --secondary: #48bb78;
+            --secondary-dark: #38a169;
+            --accent: #ed8936;
+            --danger: #f56565;
+            --warning: #d69e2e;
+            --info: #4299e1;
+            --success: #48bb78;
+            --dark: #2d3748;
+            --gray: #718096;
+            --gray-light: #a0aec0;
+            --light: #f7fafc;
+            --white: #ffffff;
+            --border: #e2e8f0;
+            
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+            --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+            --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1);
+            --radius: 12px;
+            --radius-lg: 16px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            
+            --font-primary: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-primary);
+            background: var(--light);
+            color: var(--dark);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overflow-x: hidden;
+        }
+
+        /* App Container */
+        .app {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            max-width: 768px;
+            margin: 0 auto;
+            position: relative;
+            background: var(--white);
+            box-shadow: 0 0 50px rgba(0,0,0,0.1);
+        }
+
+        /* Auth Overlay */
+        .auth-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            opacity: 0;
+            visibility: hidden;
+            transition: var(--transition);
+        }
+
+        .auth-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .auth-container {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            padding: 40px;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: var(--shadow-xl);
+            transform: translateY(20px);
+            transition: var(--transition);
+        }
+
+        .auth-overlay.active .auth-container {
+            transform: translateY(0);
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .auth-logo {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .auth-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 5px;
+        }
+
+        .auth-subtitle {
+            color: var(--gray);
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--dark);
+            font-size: 14px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 16px;
+            transition: var(--transition);
+            background: var(--white);
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-input:invalid {
+            border-color: var(--danger);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px 24px;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+            user-select: none;
+            outline: none;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: var(--white);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-secondary {
+            background: var(--gray-light);
+            color: var(--dark);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: var(--gray);
+            color: var(--white);
+        }
+
+        .btn-full {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .auth-toggle {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+            color: var(--gray);
+        }
+
+        .auth-toggle a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .auth-toggle a:hover {
+            text-decoration: underline;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: var(--white);
+            padding: 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .header-subtitle {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .sync-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .sync-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        .sync-indicator.syncing {
+            background: var(--warning);
+            animation: spin 1s linear infinite;
+        }
+
+        .sync-indicator.error {
+            background: var(--danger);
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .user-menu {
+            position: relative;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        /* Main Content */
+        .main {
+            flex: 1;
+            padding: 0 0 80px 0;
+            background: var(--light);
+        }
+
+        .page {
+            display: none;
+            padding: 20px;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Cards */
+        .card {
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            border: 1px solid var(--border);
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-2px);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .card-meta {
+            font-size: 12px;
+            color: var(--gray);
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: 20px;
+            text-align: center;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            transition: var(--transition);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .stat-icon {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--gray);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Section */
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-action {
+            font-size: 14px;
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        /* Meal/Workout Items */
+        .item-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .item {
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: 16px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .item:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .item-time {
+            font-size: 12px;
+            color: var(--gray);
+            font-weight: 500;
+        }
+
+        .item-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .item-badge {
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .badge-calories {
+            background: rgba(237, 137, 54, 0.1);
+            color: var(--accent);
+        }
+
+        .badge-duration {
+            background: rgba(72, 187, 120, 0.1);
+            color: var(--secondary);
+        }
+
+        .item-details {
+            font-size: 14px;
+            color: var(--gray);
+            line-height: 1.4;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--gray);
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-title {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--dark);
+        }
+
+        .empty-text {
+            font-size: 14px;
+            color: var(--gray);
+        }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 768px;
+            background: var(--white);
+            border-top: 1px solid var(--border);
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+            z-index: 1000;
+        }
+
+        .nav-container {
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0;
+        }
+
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 8px 4px;
+            cursor: pointer;
+            transition: var(--transition);
+            background: none;
+            border: none;
+            color: var(--gray);
+            position: relative;
+            text-decoration: none;
+        }
+
+        .nav-item.active {
+            color: var(--primary);
+        }
+
+        .nav-item.active::after {
+            content: '';
+            position: absolute;
+            top: -1px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 24px;
+            height: 3px;
+            background: var(--primary);
+            border-radius: 3px;
+        }
+
+        .nav-icon {
+            font-size: 22px;
+            margin-bottom: 4px;
+        }
+
+        .nav-label {
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        /* Toast Notifications */
+        .toast {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: 16px 20px;
+            box-shadow: var(--shadow-xl);
+            border-left: 4px solid var(--success);
+            transform: translateX(400px);
+            transition: var(--transition);
+            z-index: 1500;
+            max-width: 300px;
+            min-width: 250px;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast.error {
+            border-left-color: var(--danger);
+        }
+
+        .toast.warning {
+            border-left-color: var(--warning);
+        }
+
+        .toast.info {
+            border-left-color: var(--info);
+        }
+
+        .toast-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .toast-icon {
+            font-size: 20px;
+        }
+
+        .toast-message {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--dark);
+        }
+
+        /* Loading States */
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            color: var(--gray);
+        }
+
+        .loading-spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 16px;
+        }
+
+        .loading-text {
+            font-size: 14px;
+            color: var(--gray);
+        }
+
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            padding: 20px;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            max-width: 500px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-xl);
+            animation: modalSlideUp 0.3s ease-out;
+        }
+
+        @keyframes modalSlideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            padding: 24px 24px 0 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: var(--gray);
+            cursor: pointer;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: var(--transition);
+        }
+
+        .modal-close:hover {
+            background: var(--light);
+            color: var(--dark);
+        }
+
+        .modal-body {
+            padding: 0 24px 24px 24px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 480px) {
+            .app {
+                max-width: 100%;
+            }
+            
+            .header {
+                padding: 16px;
+            }
+            
+            .header-left h1 {
+                font-size: 20px;
+            }
+            
+            .page {
+                padding: 16px;
+            }
+            
+            .card {
+                padding: 16px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+            
+            .auth-container {
+                padding: 30px 20px;
+                margin: 20px;
+            }
+        }
+
+        /* Utility Classes */
+        .text-center { text-align: center; }
+        .text-left { text-align: left; }
+        .text-right { text-align: right; }
+        .font-weight-500 { font-weight: 500; }
+        .font-weight-600 { font-weight: 600; }
+        .color-primary { color: var(--primary); }
+        .color-secondary { color: var(--secondary); }
+        .color-gray { color: var(--gray); }
+        .color-success { color: var(--success); }
+        .color-danger { color: var(--danger); }
+        .mb-0 { margin-bottom: 0; }
+        .mb-10 { margin-bottom: 10px; }
+        .mb-20 { margin-bottom: 20px; }
+        .mt-0 { margin-top: 0; }
+        .mt-10 { margin-top: 10px; }
+        .mt-20 { margin-top: 20px; }
+
+        /* Dark mode support (future) */
+        @media (prefers-color-scheme: dark) {
+            /* Dark mode styles would go here */
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <!-- Authentication Overlay -->
+        <div id="authOverlay" class="auth-overlay active">
+            <div class="auth-container">
+                <div class="auth-header">
+                    <div class="auth-logo">🏃‍♂️</div>
+                    <h2 class="auth-title" id="authTitle">Benvenuto</h2>
+                    <p class="auth-subtitle" id="authSubtitle">Accedi alla tua Fitness Journey</p>
+                </div>
+
+                <form id="authForm">
+                    <div class="form-group">
+                        <label class="form-label" for="authEmail">Email</label>
+                        <input 
+                            type="email" 
+                            id="authEmail" 
+                            class="form-input" 
+                            placeholder="inserisci@email.com"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="authPassword">Password</label>
+                        <input 
+                            type="password" 
+                            id="authPassword" 
+                            class="form-input" 
+                            placeholder="••••••••"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group" id="nameGroup" style="display: none;">
+                        <label class="form-label" for="authName">Nome (opzionale)</label>
+                        <input 
+                            type="text" 
+                            id="authName" 
+                            class="form-input" 
+                            placeholder="Il tuo nome"
+                        >
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-full" id="authSubmit">
+                        <span id="authSubmitText">Accedi</span>
+                    </button>
+                </form>
+
+                <div class="auth-toggle">
+                    <span id="authToggleText">Non hai un account?</span>
+                    <a href="#" id="authToggleLink">Registrati</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="header-left">
+                    <h1>Fitness Journey</h1>
+                    <div class="header-subtitle" id="userEmail">Caricamento...</div>
+                </div>
+                <div class="header-right">
+                    <div class="sync-status">
+                        <div class="sync-indicator" id="syncIndicator"></div>
+                        <span id="syncText">Sincronizzato</span>
+                    </div>
+                    <div class="user-menu">
+                        <div class="user-avatar" onclick="logout()" title="Logout">
+                            <span id="userInitials">?</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Home Page -->
+            <div id="homePage" class="page active">
+                <!-- Stats Grid -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">🔥</div>
+                        <div class="stat-value" id="todayCalories">0</div>
+                        <div class="stat-label">kcal oggi</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">💪</div>
+                        <div class="stat-value" id="todayWorkouts">0</div>
+                        <div class="stat-label">allenamenti</div>
+                    </div>
+                </div>
+
+                <!-- Today's Workouts -->
+                <section class="section">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <span>🏃‍♂️</span>
+                            Allenamenti di Oggi
+                        </h2>
+                    </div>
+                    <div id="todayWorkoutsList" class="item-list">
+                        <div class="loading">
+                            <div class="loading-spinner"></div>
+                            <div class="loading-text">Caricamento allenamenti...</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Today's Meals -->
+                <section class="section">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <span>🍽️</span>
+                            Pasti di Oggi
+                        </h2>
+                    </div>
+                    <div id="todayMealsList" class="item-list">
+                        <div class="loading">
+                            <div class="loading-spinner"></div>
+                            <div class="loading-text">Caricamento pasti...</div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Calendar Page -->
+            <div id="calendarPage" class="page">
+                <section class="section">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <span>📅</span>
+                            Calendario
+                        </h2>
+                    </div>
+                    <div class="card">
+                        <div class="text-center">
+                            <div class="empty-icon">📅</div>
+                            <div class="empty-title">Vista Calendario</div>
+                            <div class="empty-text">Funzionalità in sviluppo</div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Nutrition Page -->
+            <div id="nutritionPage" class="page">
+                <section class="section">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <span>🍽️</span>
+                            Piano Nutrizionale
+                        </h2>
+                    </div>
+                    <div id="nutritionContent">
+                        <div class="loading">
+                            <div class="loading-spinner"></div>
+                            <div class="loading-text">Caricamento piano nutrizionale...</div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Progress Page -->
+            <div id="progressPage" class="page">
+                <section class="section">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <span>📊</span>
+                            I Tuoi Progressi
+                        </h2>
+                    </div>
+                    <div id="progressContent">
+                        <div class="loading">
+                            <div class="loading-spinner"></div>
+                            <div class="loading-text">Caricamento progressi...</div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Settings Page -->
+            <div id="settingsPage" class="page">
+                <section class="section">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <span>⚙️</span>
+                            Impostazioni
+                        </h2>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">🔄 Sincronizzazione Cloud</h3>
+                        </div>
+                        <p class="color-gray mb-20">I tuoi dati sono sincronizzati automaticamente su tutti i dispositivi</p>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button class="btn btn-primary" onclick="forceSync()">
+                                <span>🔄</span>
+                                Sincronizza Ora
+                            </button>
+                            <button class="btn btn-secondary" onclick="exportData()">
+                                <span>📤</span>
+                                Esporta Backup
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">👤 Profilo</h3>
+                        </div>
+                        <div class="color-gray">
+                            <div><strong>Email:</strong> <span id="profileEmail">-</span></div>
+                            <div><strong>Altezza:</strong> 177cm</div>
+                            <div><strong>Obiettivo:</strong> Fat Loss 22% → 15%</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">🔧 Debug Info</h3>
+                        </div>
+                        <div class="color-gray" style="font-family: var(--font-mono); font-size: 12px;">
+                            <div><strong>API:</strong> <span id="debugApi">-</span></div>
+                            <div><strong>Status:</strong> <span id="debugStatus">-</span></div>
+                            <div><strong>Last Sync:</strong> <span id="debugLastSync">-</span></div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">🚪 Account</h3>
+                        </div>
+                        <button class="btn btn-secondary" onclick="logout()" style="background: var(--danger); color: var(--white);">
+                            <span>🚪</span>
+                            Logout
+                        </button>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <div class="nav-container">
+                <button class="nav-item active" onclick="showPage('home')">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-label">Home</span>
+                </button>
+                <button class="nav-item" onclick="showPage('calendar')">
+                    <span class="nav-icon">📅</span>
+                    <span class="nav-label">Calendario</span>
+                </button>
+                <button class="nav-item" onclick="showPage('nutrition')">
+                    <span class="nav-icon">🍽️</span>
+                    <span class="nav-label">Nutrizione</span>
+                </button>
+                <button class="nav-item" onclick="showPage('progress')">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-label">Progressi</span>
+                </button>
+                <button class="nav-item" onclick="showPage('settings')">
+                    <span class="nav-icon">⚙️</span>
+                    <span class="nav-label">Altro</span>
+                </button>
+            </div>
+        </nav>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <div class="toast-content">
+            <span class="toast-icon" id="toastIcon">✅</span>
+            <span class="toast-message" id="toastMessage"></span>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTitle">Dettagli</h3>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Content will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===========================================
+        // CONFIGURATION & GLOBAL STATE
+        // ===========================================
+        
+        const API_BASE = 'https://fitness-backend-myfit.up.railway.app/api';
+        
+        let currentUser = null;
+        let authToken = null;
+        let nutritionData = {};
+        let workoutData = {};
+        let userSettings = {};
+        let isAuthenticated = false;
+        let isAuthMode = true; // Start in auth mode
+        let syncInterval = null;
+
+        // ===========================================
+        // INITIALIZATION
+        // ===========================================
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initApp();
+            setupEventListeners();
+        });
+
+        async function initApp() {
+            console.log('🚀 Initializing Fitness App...');
+            
+            // Check for existing auth token
+            authToken = localStorage.getItem('fitness_auth_token');
+            
+            if (authToken) {
+                try {
+                    setSyncStatus('syncing', 'Verifica token...');
+                    await validateToken();
+                    await loadUserData();
+                    showMainApp();
+                    showToast('Bentornato! 👋', 'success');
+                } catch (error) {
+                    console.error('Token validation failed:', error);
+                    clearAuthData();
+                    showAuthForm();
+                }
+            } else {
+                showAuthForm();
+            }
+
+            // Update debug info
+            updateDebugInfo();
+        }
+
+        function setupEventListeners() {
+            // Auth form
+            document.getElementById('authForm').addEventListener('submit', handleAuthSubmit);
+            document.getElementById('authToggleLink').addEventListener('click', toggleAuthMode);
+            
+            // Modal close on outside click
+            document.getElementById('modal').addEventListener('click', (e) => {
+                if (e.target.id === 'modal') closeModal();
+            });
+            
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && document.getElementById('modal').classList.contains('active')) {
+                    closeModal();
+                }
+            });
+
+            // Online/offline detection
+            window.addEventListener('online', () => {
+                showToast('Connessione ripristinata 🌐', 'success');
+                if (isAuthenticated) forceSync();
+            });
+            
+            window.addEventListener('offline', () => {
+                showToast('Offline - dati salvati localmente 📱', 'warning');
+                setSyncStatus('error', 'Offline');
+            });
+        }
+
+        // ===========================================
+        // AUTHENTICATION
+        // ===========================================
+
+        async function handleAuthSubmit(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('authEmail').value.trim();
+            const password = document.getElementById('authPassword').value;
+            const name = document.getElementById('authName').value.trim();
+
+            if (!email || !password) {
+                showToast('Compila tutti i campi richiesti', 'error');
+                return;
+            }
+
+            if (password.length < 6) {
+                showToast('Password deve avere almeno 6 caratteri', 'error');
+                return;
+            }
+
+            const submitBtn = document.getElementById('authSubmit');
+            const submitText = document.getElementById('authSubmitText');
+            const originalText = submitText.textContent;
+
+            try {
+                submitBtn.disabled = true;
+                submitText.textContent = isAuthMode ? 'Accesso...' : 'Registrazione...';
+                
+                if (isAuthMode) {
+                    await login(email, password);
+                } else {
+                    await register(email, password, name);
+                }
+                
+            } catch (error) {
+                showToast(error.message, 'error');
+                console.error('Auth error:', error);
+            } finally {
+                submitBtn.disabled = false;
+                submitText.textContent = originalText;
+            }
+        }
+
+        function toggleAuthMode(e) {
+            e.preventDefault();
+            isAuthMode = !isAuthMode;
+            updateAuthForm();
+        }
+
+        function updateAuthForm() {
+            const title = document.getElementById('authTitle');
+            const subtitle = document.getElementById('authSubtitle');
+            const submitText = document.getElementById('authSubmitText');
+            const toggleText = document.getElementById('authToggleText');
+            const toggleLink = document.getElementById('authToggleLink');
+            const nameGroup = document.getElementById('nameGroup');
+
+            if (isAuthMode) {
+                title.textContent = 'Bentornato';
+                subtitle.textContent = 'Accedi alla tua Fitness Journey';
+                submitText.textContent = 'Accedi';
+                toggleText.textContent = 'Non hai un account?';
+                toggleLink.textContent = 'Registrati';
+                nameGroup.style.display = 'none';
+            } else {
+                title.textContent = 'Unisciti a noi';
+                subtitle.textContent = 'Crea il tuo account Fitness Journey';
+                submitText.textContent = 'Registrati';
+                toggleText.textContent = 'Hai già un account?';
+                toggleLink.textContent = 'Accedi';
+                nameGroup.style.display = 'block';
+            }
+        }
+
+        async function login(email, password) {
+            const response = await apiCall('/auth/login', 'POST', { email, password });
+            
+            authToken = response.token;
+            currentUser = response.user;
+            localStorage.setItem('fitness_auth_token', authToken);
+            
+            await loadUserData();
+            showMainApp();
+            showToast(`Bentornato, ${currentUser.name || 'Atleta'}! 🎉`, 'success');
+        }
+
+        async function register(email, password, name) {
+            const response = await apiCall('/auth/register', 'POST', { email, password, name });
+            
+            authToken = response.token;
+            currentUser = response.user;
+            localStorage.setItem('fitness_auth_token', authToken);
+            
+            await loadUserData();
+            showMainApp();
+            showToast('Account creato con successo! 🚀', 'success');
+        }
+
+        async function validateToken() {
+            try {
+                await apiCall('/sync', 'GET');
+                return true;
+            } catch (error) {
+                throw new Error('Token non valido');
+            }
+        }
+
+        function logout() {
+            if (confirm('Sei sicuro di voler uscire?')) {
+                clearAuthData();
+                showAuthForm();
+                showToast('Logout completato 👋', 'info');
+            }
+        }
+
+        function clearAuthData() {
+            authToken = null;
+            currentUser = null;
+            isAuthenticated = false;
+            localStorage.removeItem('fitness_auth_token');
+            
+            // Clear sync interval
+            if (syncInterval) {
+                clearInterval(syncInterval);
+                syncInterval = null;
+            }
+            
+            // Clear data
+            nutritionData = {};
+            workoutData = {};
+            userSettings = {};
+        }
+
+        // ===========================================
+        // API COMMUNICATION
+        // ===========================================
+
+        async function apiCall(endpoint, method = 'GET', data = null) {
+            const url = `${API_BASE}${endpoint}`;
+            const options = {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            };
+
+            if (authToken) {
+                options.headers['Authorization'] = `Bearer ${authToken}`;
+            }
+
+            if (data) {
+                options.body = JSON.stringify(data);
+            }
+
+            const response = await fetch(url, options);
+            
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+                throw new Error(error.error || 'Errore di rete');
+            }
+
+            return await response.json();
+        }
+
+        // ===========================================
+        // DATA MANAGEMENT
+        // ===========================================
+
+        async function loadUserData() {
+            try {
+                setSyncStatus('syncing', 'Sincronizzazione...');
+                
+                const data = await apiCall('/sync', 'GET');
+                
+                nutritionData = data.nutrition || {};
+                workoutData = data.workouts || {};
+                userSettings = data.settings || {
+                    height: 177,
+                    targetBodyFat: 15,
+                    currentBodyFat: 22
+                };
+                
+                setSyncStatus('success', 'Sincronizzato');
+                updateUserInterface();
+                
+                // Update debug info
+                updateDebugInfo();
+                
+            } catch (error) {
+                setSyncStatus('error', 'Errore sync');
+                throw error;
+            }
+        }
+
+        async function saveUserData() {
+            try {
+                setSyncStatus('syncing', 'Salvataggio...');
+                
+                await apiCall('/sync', 'POST', {
+                    nutrition: nutritionData,
+                    workouts: workoutData,
+                    settings: userSettings
+                });
+                
+                setSyncStatus('success', 'Salvato');
+                updateDebugInfo();
+                
+            } catch (error) {
+                setSyncStatus('error', 'Errore salvataggio');
+                showToast('Errore nel salvataggio: ' + error.message, 'error');
+            }
+        }
+
+        // ===========================================
+        // UI MANAGEMENT
+        // ===========================================
+
+        function showAuthForm() {
+            document.getElementById('authOverlay').classList.add('active');
+            isAuthenticated = false;
+            updateAuthForm();
+        }
+
+        function showMainApp() {
+            document.getElementById('authOverlay').classList.remove('active');
+            isAuthenticated = true;
+            
+            // Update user info in header
+            if (currentUser) {
+                document.getElementById('userEmail').textContent = currentUser.email;
+                document.getElementById('profileEmail').textContent = currentUser.email;
+                
+                // Update user initials
+                const initials = currentUser.name 
+                    ? currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase()
+                    : currentUser.email[0].toUpperCase();
+                document.getElementById('userInitials').textContent = initials;
+            }
+            
+            // Start sync interval (every 5 minutes)
+            if (syncInterval) clearInterval(syncInterval);
+            syncInterval = setInterval(() => {
+                if (navigator.onLine && isAuthenticated) {
+                    loadUserData().catch(console.error);
+                }
+            }, 5 * 60 * 1000);
+            
+            // Load today's data
+            loadTodayData();
+        }
+
+        function updateUserInterface() {
+            loadTodayData();
+            loadNutritionPage();
+            loadProgressPage();
+        }
+
+        function loadTodayData() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = today.getDate();
+            const monthKey = `${year}-${month}`;
+            
+            // Load workouts
+            const todayWorkouts = workoutData[monthKey]?.workouts?.[day] || [];
+            const workoutsContainer = document.getElementById('todayWorkoutsList');
+            
+            if (todayWorkouts.length === 0) {
+                workoutsContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">🏃‍♂️</div>
+                        <div class="empty-title">Nessun allenamento oggi</div>
+                        <div class="empty-text">Goditi il tuo giorno di riposo!</div>
+                    </div>
+                `;
+            } else {
+                workoutsContainer.innerHTML = todayWorkouts.map((workout, index) => `
+                    <div class="item" onclick="showWorkoutDetails('${monthKey}', ${day}, ${index})">
+                        <div class="item-header">
+                            <span class="item-time">⏰ ${workout.time}</span>
+                            <span class="item-badge badge-duration">${workout.duration} min</span>
+                        </div>
+                        <div class="item-title">${workout.type}</div>
+                        <div class="item-details">${workout.category} • Tap per dettagli</div>
+                    </div>
+                `).join('');
+            }
+            
+            // Load meals
+            const todayMeals = nutritionData[monthKey]?.meals?.[day];
+            const mealsContainer = document.getElementById('todayMealsList');
+            
+            if (!todayMeals?.meals) {
+                mealsContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">🍽️</div>
+                        <div class="empty-title">Nessun pasto programmato</div>
+                        <div class="empty-text">Aggiungi i tuoi pasti per oggi</div>
+                    </div>
+                `;
+            } else {
+                mealsContainer.innerHTML = todayMeals.meals.map((meal, index) => `
+                    <div class="item" onclick="showMealDetails('${monthKey}', ${day}, ${index})">
+                        <div class="item-header">
+                            <span class="item-time">⏰ ${meal.time}</span>
+                            <span class="item-badge badge-calories">${meal.calories} kcal</span>
+                        </div>
+                        <div class="item-title">${meal.type}</div>
+                        <div class="item-details">
+                            ${meal.items.slice(0, 2).map(item => item.name).join(', ')}
+                            ${meal.items.length > 2 ? ` +${meal.items.length - 2} altri...` : ''}
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            // Update stats
+            document.getElementById('todayCalories').textContent = todayMeals?.calories || 0;
+            document.getElementById('todayWorkouts').textContent = todayWorkouts.length;
+        }
+
+        function loadNutritionPage() {
+            const today = new Date();
+            const monthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+            const monthNutrition = nutritionData[monthKey];
+            
+            const container = document.getElementById('nutritionContent');
+            
+            if (monthNutrition && monthNutrition.phase) {
+                const phase = monthNutrition.phase;
+                container.innerHTML = `
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">📊 Fase Attuale</h3>
+                        </div>
+                        <div style="background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; padding: 20px; border-radius: var(--radius); margin-bottom: 20px;">
+                            <div style="font-size: 20px; font-weight: 600; margin-bottom: 8px;">${phase.name}</div>
+                            <div style="opacity: 0.9;">${phase.calories} kcal/giorno</div>
+                            ${phase.macros ? `<div style="font-size: 14px; opacity: 0.8; margin-top: 8px;">${phase.macros.protein}P • ${phase.macros.fat}G • ${phase.macros.carbs}C</div>` : ''}
+                        </div>
+                        
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-icon color-primary">🍖</div>
+                                <div class="stat-value">${phase.macros?.protein || 0}g</div>
+                                <div class="stat-label">Proteine</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon color-secondary">🍞</div>
+                                <div class="stat-value">${phase.macros?.carbs || 0}g</div>
+                                <div class="stat-label">Carboidrati</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📊</div>
+                        <div class="empty-title">Piano nutrizionale non trovato</div>
+                        <div class="empty-text">Carica il tuo piano mensile per visualizzare i dettagli</div>
+                    </div>
+                `;
+            }
+        }
+
+        function loadProgressPage() {
+            const container = document.getElementById('progressContent');
+            
+            container.innerHTML = `
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">🎯 Obiettivi del Mese</h3>
+                    </div>
+                    <div style="margin-bottom: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <span>Body Fat</span>
+                            <span style="color: var(--primary); font-weight: 600;">22% → 18%</span>
+                        </div>
+                        <div style="background: var(--light); height: 8px; border-radius: 4px; overflow: hidden;">
+                            <div style="background: var(--primary); height: 100%; width: 40%; transition: width 0.5s ease;"></div>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <span>Peso Target</span>
+                            <span style="color: var(--secondary); font-weight: 600;">-3kg</span>
+                        </div>
+                        <div style="background: var(--light); height: 8px; border-radius: 4px; overflow: hidden;">
+                            <div style="background: var(--secondary); height: 100%; width: 60%; transition: width 0.5s ease;"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <span>Allenamenti Completati</span>
+                            <span style="color: var(--info); font-weight: 600;">18/24</span>
+                        </div>
+                        <div style="background: var(--light); height: 8px; border-radius: 4px; overflow: hidden;">
+                            <div style="background: var(--info); height: 100%; width: 75%; transition: width 0.5s ease;"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">📈 Statistiche</h3>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">🔥</div>
+                            <div class="stat-value">12.5k</div>
+                            <div class="stat-label">kcal settimana</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">⏱️</div>
+                            <div class="stat-value">8.5h</div>
+                            <div class="stat-label">ore allenamento</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function showPage(pageName) {
+            // Hide all pages
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+            
+            // Show selected page
+            const pageMap = {
+                'home': 'homePage',
+                'calendar': 'calendarPage',
+                'nutrition': 'nutritionPage',
+                'progress': 'progressPage',
+                'settings': 'settingsPage'
+            };
+            
+            document.getElementById(pageMap[pageName]).classList.add('active');
+            
+            // Update nav
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            event.target.closest('.nav-item').classList.add('active');
+            
+            // Load page specific data
+            if (pageName === 'nutrition') {
+                loadNutritionPage();
+            } else if (pageName === 'progress') {
+                loadProgressPage();
+            }
+        }
+
+        // ===========================================
+        // SYNC & UTILITIES
+        // ===========================================
+
+        function setSyncStatus(status, text) {
+            const indicator = document.getElementById('syncIndicator');
+            const textEl = document.getElementById('syncText');
+            
+            indicator.className = `sync-indicator ${status}`;
+            textEl.textContent = text;
+        }
+
+        async function forceSync() {
+            try {
+                await loadUserData();
+                showToast('Sincronizzazione completata! ✅', 'success');
+            } catch (error) {
+                showToast('Errore nella sincronizzazione: ' + error.message, 'error');
+            }
+        }
+
+        async function exportData() {
+            try {
+                const exportData = {
+                    nutrition: nutritionData,
+                    workouts: workoutData,
+                    settings: userSettings,
+                    user: currentUser,
+                    exported: new Date().toISOString()
+                };
+                
+                const dataStr = JSON.stringify(exportData, null, 2);
+                const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                const url = URL.createObjectURL(dataBlob);
+                
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `fitness-backup-${new Date().toISOString().split('T')[0]}.json`;
+                link.click();
+                
+                URL.revokeObjectURL(url);
+                showToast('Backup esportato! 📥', 'success');
+                
+            } catch (error) {
+                showToast('Errore nell\'export: ' + error.message, 'error');
+            }
+        }
+
+        function updateDebugInfo() {
+            document.getElementById('debugApi').textContent = API_BASE;
+            document.getElementById('debugStatus').textContent = isAuthenticated ? 'Autenticato' : 'Non autenticato';
+            document.getElementById('debugLastSync').textContent = new Date().toLocaleString();
+        }
+
+        // ===========================================
+        // MODALS & DETAILS
+        // ===========================================
+
+        function showWorkoutDetails(monthKey, day, workoutIndex) {
+            const workout = workoutData[monthKey]?.workouts?.[day]?.[workoutIndex];
+            if (!workout) return;
+            
+            const modal = document.getElementById('modal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+            
+            modalTitle.textContent = workout.type;
+            modalBody.innerHTML = `
+                <div class="card" style="margin: 0;">
+                    <h4 style="margin-bottom: 15px;">Dettagli Allenamento</h4>
+                    <div style="margin-bottom: 20px;">
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-icon">⏱️</div>
+                                <div class="stat-value">${workout.duration}</div>
+                                <div class="stat-label">minuti</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">💪</div>
+                                <div class="stat-value">${workout.category}</div>
+                                <div class="stat-label">categoria</div>
+                            </div>
+                        </div>
+                    </div>
+                    ${workout.details ? `
+                        <div style="margin-bottom: 15px;">
+                            <h5 style="color: var(--primary); margin-bottom: 8px;">📋 Dettagli</h5>
+                            <div style="background: var(--light); padding: 15px; border-radius: var(--radius); color: var(--gray);">
+                                ${workout.details.warmup ? `<strong>Riscaldamento:</strong> ${workout.details.warmup}<br><br>` : ''}
+                                ${workout.details.exercises ? `<strong>Esercizi:</strong><br>${workout.details.exercises.join('<br>')}<br><br>` : ''}
+                                ${workout.details.cooldown ? `<strong>Defaticamento:</strong> ${workout.details.cooldown}` : ''}
+                            </div>
+                        </div>
+                    ` : ''}
+                    <div style="text-align: center; color: var(--gray); font-size: 14px;">
+                        <strong>Orario:</strong> ${workout.time}
+                    </div>
+                </div>
+            `;
+            
+            modal.classList.add('active');
+        }
+
+        function showMealDetails(monthKey, day, mealIndex) {
+            const meal = nutritionData[monthKey]?.meals?.[day]?.meals?.[mealIndex];
+            if (!meal) return;
+            
+            const modal = document.getElementById('modal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+            
+            modalTitle.textContent = meal.type;
+            modalBody.innerHTML = `
+                <div class="card" style="margin: 0;">
+                    <h4 style="margin-bottom: 15px;">Composizione Pasto</h4>
+                    <div style="background: linear-gradient(135deg, var(--accent), var(--warning)); color: white; padding: 20px; border-radius: var(--radius); margin-bottom: 20px; text-align: center;">
+                        <div style="font-size: 32px; font-weight: 600; margin-bottom: 5px;">
+                            ${meal.calories} <small style="font-size: 16px; opacity: 0.8;">kcal</small>
+                        </div>
+                        <div style="opacity: 0.9;">Ore ${meal.time}</div>
+                    </div>
+                    <h5 style="margin-bottom: 10px;">Alimenti:</h5>
+                    ${meal.items.map(item => `
+                        <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border);">
+                            <span style="font-weight: 500;">${item.name}</span>
+                            <span style="color: var(--gray);">${item.amount}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            modal.classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+
+        // ===========================================
+        // TOAST NOTIFICATIONS
+        // ===========================================
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastIcon = document.getElementById('toastIcon');
+            const toastMessage = document.getElementById('toastMessage');
+            
+            const icons = {
+                success: '✅',
+                error: '❌',
+                warning: '⚠️',
+                info: 'ℹ️'
+            };
+            
+            toast.className = `toast ${type}`;
+            toastIcon.textContent = icons[type] || icons.success;
+            toastMessage.textContent = message;
+            
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 4000);
+        }
+
+        // ===========================================
+        // CONSOLE LOGGING
+        // ===========================================
+
+        console.log('🏃‍♂️ Fitness Journey App Loaded');
+        console.log('🔗 API Base:', API_BASE);
+        console.log('📱 Ready for authentication');
+    </script>
+</body>
+</html>
